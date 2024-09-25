@@ -20,9 +20,6 @@ from task import execute_task, get_next_task, prioritize_tasks
 
 
 
-
-
-
 class BabyAGI(Chain, BaseModel):
     
     # Chain과 BaseModel을 상속
