@@ -12,21 +12,22 @@ from langchain.docstore import InMemoryDocstore
 
 
 
-# OpenAI API 키 받아오기 -> ChatGPT 엔진
+##### OpenAI API 키 받아오기 -> ChatGPT 엔진
 os.environ["OPENAI_API_KEY"] = "Insert your OpenAI API Key"
-# SERP API 키 받아오기 -> 구글 검색 엔진
+##### SERP API 키 받아오기 -> 구글 검색 엔진
 os.environ["SERPAPI_API_KEY"] = "Insert your SERP API Key"
+
 
 ##### embedding model 정의 -> Text embedding 객체 생성
 embeddings_model = OpenAIEmbeddings()
 
-# Initialize the vectorstore
+
+##### Initialize the vectorstore
 embedding_size = 1536   # Embedding 차원의 수
 index = faiss.IndexFlatL2(embedding_size)   # L2 norm 기반의 인덱스
 vectorstore = FAISS(embeddings_model.embed_query, index, InMemoryDocstore({}), {})
 
-OBJECTIVE = "Find the cheapest price and site to buy a iphone16 online and give me the URL"
-
+##### 둘중에 하나의 모델을 선택
 ##### LLM을 gemma2:2b로 정의
 # llm = ChatOllama(model="gemma2:2b", temperature=0)
 # temperature은 모델의 답변의 편차를 지정하는 값 -> 0이면 일관된 답변
@@ -42,7 +43,7 @@ verbose=False
 
 # If None, will keep on going forever
 # Task 진행 반복 횟수
-max_iterations: Optional[int] = 2
+max_iterations: Optional[int] = 3
 
 baby_agi = BabyAGI.from_llm(
     llm=llm,
