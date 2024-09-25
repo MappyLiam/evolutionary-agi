@@ -17,7 +17,13 @@ from task import TaskCreationChain, TaskPrioritizationChain
 from task import execute_task, get_next_task, prioritize_tasks
 
 
-
+"""
+babyagi는 많은 agent(요청을 처리하는 여러개의 작은 LLM)
+babyagi가 기존에 Tools에 작성된 프롬프트나 Task 생성에서 작성된 프롬프트에 따라 LLM 반환값들을 수집
+이 반환된 값들을 우선순위를 지정하여 Task를 순서대로 처리
+최종으로 가장 근접하게 Embedding된 답변을 사용하게 제공
+단순히 답을 얻는게 아닌 사용자 입장에서 답변을 추출한 과정을 보여줄 수 있는 ChatBot
+"""
 
 
 class BabyAGI(Chain, BaseModel):
