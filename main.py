@@ -12,7 +12,10 @@ from langchain.docstore import InMemoryDocstore
 
 
 
-
+# OpenAI API 키 받아오기 -> ChatGPT 엔진
+os.environ["OPENAI_API_KEY"] = "Insert your OpenAI API Key"
+# SERP API 키 받아오기 -> 구글 검색 엔진
+os.environ["SERPAPI_API_KEY"] = "Insert your SERP API Key"
 
 ##### embedding model 정의 -> Text embedding 객체 생성
 embeddings_model = OpenAIEmbeddings()
