@@ -23,10 +23,6 @@ from task import execute_task, get_next_task, prioritize_tasks
 
 
 
-
-
-
-##### BabyAGI 에이전트 모델 클래스
 class BabyAGI(Chain, BaseModel):
     
     # Chain과 BaseModel을 상속
@@ -51,145 +47,16 @@ class BabyAGI(Chain, BaseModel):
 
 
 
-
-    # pydantic 라이브러리 모델 설정
     class Config:
         """Configuration for this pydantic object."""
-        # 임의의 데이터 타입 사용 가능
+        # Pydantic 일반 Python 객체를 필드로 허용
         arbitrary_types_allowed = True
 
+    # 주어진 task를 task_list에 추가
     def add_task(self, task: Dict):
         self.task_list.append(task)
 
-    def print_task_list(self):
-        print("\033[95m\033[1m" + "\n*****TASK LIST*****\n" + "\033[0m\033[0m")
-        for t in self.task_list:
-            print(str(t["task_id"]) + ": " + t["task_name"])
-
-    def print_next_task(self, task: Dict):
-        print("\033[92m\033[1m" + "\n*****NEXT TASK*****\n" + "\033[0m\033[0m")
-        print(str(task["task_id"]) + ": " + task["task_name"])
-
-    def print_task_result(self, result: str):
-        print("\033[93m\033[1m" + "\n*****TASK RESULT*****\n" + "\033[0m\033[0m")
-        print(result)
-
-    @property
-    def input_keys(self) -> List[str]:
-        return ["objective"]
-
-    @property
-    def output_keys(self) -> List[str]:
-        return []
-
-    def _call(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Run the agent."""
-        objective = inputs['objective']
-        first_task = inputs.get("first_task", "Make a todo list")
-        self.add_task({"task_id": 1, "task_name": first_task})
-        num_iters = 0
-
-        # 특정 결과를 얻을 때까지 while문을 실행
-        # OpenAI 등 여러가지 LLM 모델과 같이 사용 가능
-        while True:
-            if self.task_list:
-                self.print_task_list()
-
-                # Step 1: Pull the first task
-                task = self.task_list.popleft()
-                self.print_next_task(task)
-
-                # Step 2: Execute the task
-                result = execute_task(
-                    self.vectorstore, self.execution_chain, objective, task["task_name"]
-                )
-                this_task_id = int(task["task_id"])
-
-                self.print_task_result(result)
-
-                # Step 3: Store the result in Pinecone
-                # Pinecone이나 DB를 이용하지 않고 로컬에 저장
-                result_id = f"result_{task['task_id']}"
-                self.vectorstore.add_texts(
-                    texts=[result],
-                    metadatas=[{"task": task["task_name"]}],
-                    ids=[result_id],
-                )
-
-                # Step 4: Create new tasks and reprioritize task list
-                new_tasks = get_next_task(
-                    self.task_creation_chain, result, task["task_name"], [t["task_name"] for t in self.task_list], objective
-                )
-                for new_task in new_tasks:
-                    self.task_id_counter += 1
-                    new_task.update({"task_id": self.task_id_counter})
-                    self.add_task(new_task)
-                self.task_list = deque(
-                    prioritize_tasks(
-                        self.task_prioritization_chain, this_task_id, list(self.task_list), objective
-                    )
-                )
-            num_iters += 1
-            if self.max_iterations is not None and num_iters == self.max_iterations:
-                print("\033[91m\033[1m" + "\n*****TASK ENDING*****\n" + "\033[0m\033[0m")
-                break
-        return {}
-
-    @classmethod
-    def from_llm(
-        cls,
-        llm: BaseLLM,
-        vectorstore: VectorStore,
-        verbose: bool = False,
-        **kwargs
-    ) -> "BabyAGI":
-        """Initialize the BabyAGI Controller."""
-        task_creation_chain = TaskCreationChain.from_llm(
-            llm, verbose=verbose
-        )
-        task_prioritization_chain = TaskPrioritizationChain.from_llm(
-            llm, verbose=verbose
-        )
-        llm_chain = LLMChain(llm=llm, prompt=prompt)
-        tool_names = [tool.name for tool in tools]
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names)
-        agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
-        return cls(
-            task_creation_chain=task_creation_chain,
-            task_prioritization_chain=task_prioritization_chain,
-            execution_chain=agent_executor,
-            vectorstore=vectorstore,
-            **kwargs
-        )
-
-
-
-
-
-##### BabyAGI 에이전트 모델 클래스
-class BabyAGI(Chain, BaseModel):
-    
-    # Chain과 BaseModel을 상속
-    # Objective를 받아서 수행
-    """Controller model for the BabyAGI agent."""
-
-    # deque를 사용하여 관리되는 작업 목록
-    # Field 함수는 데이터 타입을 쉽게 저장해주는 도구 -> 강력한 타입 검사, 유효성 검사
-    task_list: deque = Field(default_factory=deque)
-    task_creation_chain: TaskCreationChain = Field(...)
-    task_prioritization_chain: TaskPrioritizationChain = Field(...)
-    execution_chain: AgentExecutor = Field(...)
-    task_id_counter: int = Field(1)
-    vectorstore: VectorStore = Field(init=False)
-    max_iterations: Optional[int] = None
-
-    class Config:
-        """Configuration for this pydantic object."""
-        arbitrary_types_allowed = True
-
-    def add_task(self, task: Dict):
-        self.task_list.append(task)
-
+    # 현재 작업 목록을 출력하고, 문자열로 반환
     def get_task_list(self) -> str:
         # 터미널 출력
         print("\033[95m\033[1m" + "\n***** TASK LIST *****\n" + "\033[0m\033[0m")
@@ -198,6 +65,7 @@ class BabyAGI(Chain, BaseModel):
         # ANSI 코드를 제거한 문자열을 반환
         return "\n***** TASK LIST *****\n" + "\n".join([f"{t['task_id']}: {t['task_name']}" for t in self.task_list])
 
+    # 다음으로 수행할 task 출력하고 반환
     def get_next_task(self, task: Dict) -> str:
         # 터미널 출력
         print("\033[92m\033[1m" + "\n***** NEXT TASK *****\n" + "\033[0m\033[0m")
@@ -205,6 +73,7 @@ class BabyAGI(Chain, BaseModel):
         # ANSI 코드를 제거한 문자열을 반환
         return "\n***** NEXT TASK *****\n" + f"{task['task_id']}: {task['task_name']}"
 
+    # 작업 결과를 출력하고 반환
     def get_task_result(self, result: str) -> str:
         # 터미널 출력
         print("\033[93m\033[1m" + "\n***** TASK RESULT *****\n" + "\033[0m\033[0m")
@@ -212,7 +81,13 @@ class BabyAGI(Chain, BaseModel):
         # ANSI 코드를 제거한 문자열을 반환
         return "\n***** TASK RESULT *****\n" + result
 
+
+
+
+
     @property
+    # input_keys: BabyAGI 클래스가 기대하는 입력 값(objective)을 지정합니다.
+    # output_keys: BabyAGI 클래스가 반환하는 출력 키(task_output)을 지정합니다.
     def input_keys(self) -> List[str]:
         return ["objective"]
 
@@ -220,6 +95,8 @@ class BabyAGI(Chain, BaseModel):
     def output_keys(self) -> List[str]:
         return ["task_output"]  # 출력 키를 'task_output'으로 변경
 
+
+    # Agent를 활용한 task 수행
     def _call(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Run the agent."""
         objective = inputs['objective']
@@ -288,6 +165,9 @@ class BabyAGI(Chain, BaseModel):
     
 
     @classmethod
+    # from_llm: BabyAGI 객체를 생성하는 클래스 메서드입니다.
+    # ZeroShotAgent: llm_chain과 allowed_tools를 통해 모델을 생성하고 에이전트를 초기화합니다.
+    # AgentExecutor: 주어진 agent와 tools를 사용하여 작업을 수행하는 핵심 역할을 담당합니다.
     def from_llm(
         cls,
         llm: BaseLLM,
