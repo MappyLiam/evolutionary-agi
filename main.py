@@ -10,10 +10,8 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.docstore import InMemoryDocstore
 
-##### OpenAI API 키 받아오기
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-##### 검색 API key 지정
-SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
+
+
 
 
 ##### embedding model 정의 -> Text embedding 객체 생성
