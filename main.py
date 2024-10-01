@@ -1,83 +1,48 @@
-import os
-import faiss
+
+import json
+import re
 import gradio as gr
 
-from babyagi import BabyAGI
-from typing import Optional
-from langchain_community.chat_models import ChatOllama
-from langchain import OpenAI
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.docstore import InMemoryDocstore
+from llama_index.core.schema import QueryBundle, QueryType
+from llama_index.llms.ollama import Ollama
+from root_agent import EvolutionaryAgi
 
+llm = Ollama(model="gemma2", request_timeout=60.0)
 
-
-##### OpenAI API 키 받아오기 -> ChatGPT 엔진
-os.environ["OPENAI_API_KEY"] = "Insert your OpenAI API Key"
-##### SERP API 키 받아오기 -> 구글 검색 엔진
-os.environ["SERPAPI_API_KEY"] = "Insert your SERP API Key"
-
-
-##### embedding model 정의 -> Text embedding 객체 생성
-embeddings_model = OpenAIEmbeddings()
-
-
-##### Initialize the vectorstore
-embedding_size = 1536   # Embedding 차원의 수
-index = faiss.IndexFlatL2(embedding_size)   # L2 norm 기반의 인덱스
-vectorstore = FAISS(embeddings_model.embed_query, index, InMemoryDocstore({}), {})
-
-##### 둘중에 하나의 모델을 선택
-##### LLM을 gemma2:2b로 정의
-# llm = ChatOllama(model="gemma2:2b", temperature=0)
-# temperature은 모델의 답변의 편차를 지정하는 값 -> 0이면 일관된 답변
-
-##### LLM을 OpenAI로 정의
-llm = OpenAI(temperature=0)
-# temperature은 모델의 답변의 편차를 지정하는 값 -> 0이면 일관된 답변
-
-
-##### BabyAGI 설정
-# Logging of LLMChains
-verbose=False
-
-# If None, will keep on going forever
-# Task 진행 반복 횟수
-max_iterations: Optional[int] = 3
-
-baby_agi = BabyAGI.from_llm(
-    llm=llm,
-    vectorstore=vectorstore,
-    verbose=verbose,
-    max_iterations=max_iterations
+def chat(message, history):
+    response_stream = EvolutionaryAgi(llm=llm).generate_workflow(message)
+    
+    response = ""
+    for chunk in response_stream:
+        response += chunk.delta
+        yield response
+    
+    code = response
+    # to strip ```python and ```
+    clean_code = re.sub(r"```[a-zA-Z]*\n?", "", code).strip()
+    
+    local_scope = {}
+    exec(f"""
+from llama_index.llms.ollama import Ollama
+from llama_index.core.base.llms.types import (
+    ChatMessage,
 )
 
+def code():
+    {clean_code}
 
-# #####Gradio chatbot -> gemma2:2b만을 사용한 chatbot
-# def echo(message, history):
-    
-#     # llm query를 사용자 입력으로 지정
-#     # OBJECTIVE = message
-    
-#     # llm의 답변
-#     response = llm.invoke(message)
-#     return response.content
+result = code()
+""", globals(), local_scope)
+    stream = local_scope['stream']
 
-
-##### Gradio chatbot -> babyagi 적용한 chatbot
-def echo(message, history):
-    # invoke 메서드 사용
-    response = baby_agi.invoke({"objective": message})
-    
-    # BabyAGI의 출력은 "task_output" 키에 저장되어 있습니다.
-    task_output = response.get("task_output", "No output generated.")
-    
-    return task_output
-
+    worker_response = response + "\n\nThe code executed successfully.\n\n====Result====\n\n"
+    for chunk in stream:
+        worker_response += chunk.delta
+        yield worker_response
 
 
 #### Gradio 웹 호스팅
-demo = gr.ChatInterface(fn=echo, examples=["hello", "hola", "merhaba"], title="Adolescence AGI Bot")
+demo = gr.ChatInterface(fn=chat, title="Evolutionary AGI Bot")
 demo.launch(share=True)  # 웹에서 공유 가능하도록 share=True 설정
 
 
