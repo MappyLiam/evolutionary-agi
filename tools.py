@@ -19,9 +19,9 @@ PromptTemplate은 텍스트 생성 모델에게 작업을 요청할 때 사용�
 
 
 ##### OpenAI API 키 받아오기 -> ChatGPT 엔진
-os.environ["OPENAI_API_KEY"] = "Insert your OpenAI API Key"
+os.environ["OPENAI_API_KEY"] = ""
 ##### SERP API 키 받아오기 -> 구글 검색 엔진
-os.environ["SERPAPI_API_KEY"] = "Insert your SERP API Key"
+os.environ["SERPAPI_API_KEY"] = ""
 
 
 # 프롬프트 템플릿 정의: 주어진 objective에 따른 todo 리스트를 생성하는 템플릿을 생성

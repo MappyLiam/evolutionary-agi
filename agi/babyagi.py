@@ -84,10 +84,6 @@ class BabyAGI(Chain, BaseModel):
         # ANSI 코드를 제거한 문자열을 반환
         return "\n***** TASK RESULT *****\n" + result
 
-
-
-
-
     @property
     # input_keys: BabyAGI 클래스가 기대하는 입력 값(objective)을 지정합니다.
     # output_keys: BabyAGI 클래스가 반환하는 출력 키(task_output)을 지정합니다.
